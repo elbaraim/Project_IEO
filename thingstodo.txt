@@ -1,0 +1,5 @@
+-Read bibliography
+-Find biological questions
+-Play with data
+-Find categories: batch + control/problem
+-Select 10 control + 10 problem (taking into account batch effect)
