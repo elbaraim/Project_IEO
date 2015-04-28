@@ -1,4 +1,4 @@
-ource(“http://bioconductor.org/biocLite.R”)
+> source(“http://bioconductor.org/biocLite.R”)
 > library(“GEOquery”)
 > expr = getGEO(filename="/Users/cristinaleal/Documents/IEO/PROJECT/GSE13041-GPL96_series_matrix.txt")
 > pdata = pData(expr)
@@ -11,11 +11,21 @@ ource(“http://bioconductor.org/biocLite.R”)
 > sampling_PN = pdata_PN[sample(nrow(pdata_PN),20),]
 
 # Quality assessment
+> celdir = "/Users/cristinaleal/GitHub/Project_IEO/data/"
+> glio = ReadAffy(celfile.path = celdir)
+
+With the samples selected from before we create a subset of affybatch object with the 40 samples:
+> celdir2 = "/Users/cristinaleal/Documents/IEO/PROJECT/filtered/"
+> filtered_affy = ReadAffy(celfile.path = celdir2)
+> filtered_affy
+
+Subsets of 10 samples from the filtered_affy(40 samples):
+> filtered_affy.subset3 <- filtered_affy[,21:30]
+> rm(filtered_affy.subset)
+> filtered_affy.subset4 <- filtered_affy[,31:40]
+> filtered_affy.subset2 <- filtered_affy[,11:20]
+> filtered_affy.subset1 <- filtered_affy[,1:10]
+
 
 
 #batchEffect of both data sets of sampling (20 samples each)
-
-
-
-
-
