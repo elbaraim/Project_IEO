@@ -29,3 +29,7 @@ Subsets of 10 samples from the filtered_affy(40 samples):
 
 
 #batchEffect of both data sets of sampling (20 samples each)
+
+
+
+
