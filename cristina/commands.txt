@@ -26,10 +26,18 @@ Subsets of 10 samples from the filtered_affy(40 samples):
 > filtered_affy.subset2 <- filtered_affy[,11:20]
 > filtered_affy.subset1 <- filtered_affy[,1:10]
 
+For each subset create images comparing the microarrays:
+> par(mfrow = c(2, 5), mar = c(1, 1, 3, 1))
+> image(filtered_affy.subset2)
 
+
+Raw intensity values distribution:
+> boxplot(filtered_affy, las=2, main="Raw intensity values distribution Boxplot")
+
+
+NUSE plots:
+> library(affyPLM)
+> Pset <- fitPLM(MLL.B.subset)
+> NUSE(Pset, las=2, main="NUSE plots")
 
 #batchEffect of both data sets of sampling (20 samples each)
-
-
-
-
