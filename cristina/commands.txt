@@ -1,0 +1,21 @@
+ource(“http://bioconductor.org/biocLite.R”)
+> library(“GEOquery”)
+> expr = getGEO(filename="/Users/cristinaleal/Documents/IEO/PROJECT/GSE13041-GPL96_series_matrix.txt")
+> pdata = pData(expr)
+> pdata_PN = pdata[pdata$characteristics_ch1.4 == "HC: PN",]
+> pdata_rest = rbind(pdata_Pro, pdata_Mes, pdata_ProMes)
+
+#randomise acquisition of samples in pdata_PN and pdata_rest:
+
+> sampling_rest = pdata_rest[sample(nrow(pdata_rest),20),]
+> sampling_PN = pdata_PN[sample(nrow(pdata_PN),20),]
+
+# Quality assessment
+
+
+#batchEffect of both data sets of sampling (20 samples each)
+
+
+
+
+
