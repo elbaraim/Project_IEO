@@ -1,0 +1,104 @@
+> source(“http://bioconductor.org/biocLite.R”)
+> library(“GEOquery”)
+> expr = getGEO(filename="/Users/cristinaleal/Documents/IEO/PROJECT/GSE13041-GPL96_series_matrix.txt")
+> pdata = pData(expr)
+> pdata_PN = pdata[pdata$characteristics_ch1.4 == "HC: PN",]
+> pdata_rest = rbind(pdata_Pro, pdata_Mes, pdata_ProMes)
+
+# glioblastoma subtypes
+> celFilePathPN = "/Users/cristinaleal/Documents/IEO/PROJECT/finalset/lastPN/"
+> celFilePathnoPN = "/Users/cristinaleal/Documents/IEO/PROJECT/finalset/lastnoPN/"
+> celFileNames <- c(list.files(celFilePathPN, pattern = "CEL.gz", full.names = TRUE), list.files(celFilePathnoPN, pattern = "CEL.gz", full.names = TRUE))
+> affyBatch <- ReadAffy(filenames = celFileNames)
+> pd <- data.frame(subtype = rep(NA, length(sampleNames(affyBatch))))
+> rownames(pd) <- sampleNames(affyBatch)
+> pd[list.files(celFilePathPN), ] <- "PN"
+> pd[list.files(celFilePathnoPN), ] <- "noPN"
+> pd$subtype <- factor(pd$subtype)
+> vm <- data.frame(labelDescription = "Glioblastoma subtype")
+> rownames(vm) <- "subtype"
+> phenoData(affyBatch) <- new("AnnotatedDataFrame", data = pd, varMetadata = vm)
+> sampleNames(affyBatch) = gsub('.{7}$', '', sampleNames(affyBatch))
+
+#random acquisition of samples in pdata_PN and pdata_rest:
+
+> sampling_rest = pdata_rest[sample(nrow(pdata_rest),20),]
+> sampling_PN = pdata_PN[sample(nrow(pdata_PN),20),]
+
+# Quality assessment
+> celdir = "/Users/cristinaleal/GitHub/Project_IEO/data/"
+> glio = ReadAffy(celfile.path = celdir)
+
+With the samples selected from before we create a subset of affybatch object with the 40 samples:
+> celdir2 = "/Users/cristinaleal/Documents/IEO/PROJECT/filtered/"
+> filtered_affy = ReadAffy(celfile.path = celdir2)
+> filtered_affy
+> sampleNames(abatch) = gsub('.{7}$', '', sampleNames(abatch))
+
+Subsets of 10 samples from the filtered_affy(40 samples):
+> filtered_affy.subset3 <- filtered_affy[,21:30]
+> rm(filtered_affy.subset)
+> filtered_affy.subset4 <- filtered_affy[,31:40]
+> filtered_affy.subset2 <- filtered_affy[,11:20]
+> filtered_affy.subset1 <- filtered_affy[,1:10]
+
+For each subset create images comparing the microarrays:
+> par(mfrow = c(2, 5), mar = c(1, 1, 3, 1))
+> image(filtered_affy.subset2)
+
+
+Raw intensity values distribution:
+> boxplot(filtered_affy, las=2, main="Raw intensity values distribution Boxplot")
+
+
+NUSE plots:
+> library(affyPLM)
+> Pset <- fitPLM(filtered_affy)
+> NUSE(Pset, las=2, main="NUSE")
+
+RLE plots:
+> RLE(Pset, las=2, main="RLE")
+
+How to discard bad samples:
+> rleDiag <- RLE(Pset, type="stats")
+> nuseDiag <- NUSE(Pset, type = "stats")
+> badNuseRleChips <- which(nuseDiag["median", ] > 1.03 | abs(rleDiag["median",]) > 0.1)
+
+sorted:
+> sort(nuseDiag["median", ], decreasing = TRUE)
+> sort(abs(rleDiag["median", ]), decreasing = TRUE)
+
+## Raw intensity values distribution
+> par(mar = c(4, 5, 3, 1))
+> plotDensity.AffyBatch(affyBatch, lwd = 2, col = 1:20, lty = 1:20, main="Raw intensity values distribution")
+> legend("topright", sampleNames(affyBatch), col = 1:20, lty = 1:20, lwd = 2, inset = 0.1)
+
+Probe level modeling for P6:
+> Pset <- fitPLM(filtered_affy)
+> par(mfrow = c(1, 3))
+> image(filtered_affy[, 1]) ## raw intensities for sample A
+> image(Pset, type = "resids", which = 1) ## PLM residuals for sample A image(Pset, type = "weights", which = 1) ## PLM weights for sample A
+
+##Normalisation
+> eset <- rma(abatch)
+
+##MA plots
+> png("./MAInitial%02d.png")
+> MAplot(eset, plot.method = "smoothScatter", ask=FALSE)
+> dev.off()
+
+
+##Subset of 20 samples (10 samples PN, 10 samples noPN):
+> final_PN = pdata_PN[sample(nrow(pdata_PN),10),]
+> final_noPN = pdata_rest[sample(nrow(pdata_rest),10),]
+> finalset = rbind(final_PN, final_noPN)
+
+
+## AnnotatedDataFrame object
+> gset <- getGEO(filename="GSE13041-GPL96_series_matrix.txt", GSEMatrix=TRUE)
+> annotated = featureData(gset)
+> phenoData(filtered_affy) <- annotated
+# annotated = phenodata (del AnnotatedDataFrame .txt)
+# filtered_affy = AffyBatch object with the 40 samples chosen
+
+##BATCH EFFECT> scanDate1 <- protocolData(eset)$ScanDate> scanDate1 <- gsub(" .*", "", scanDate1)> scanDate1 <- as.Date(scanDate1, "%m/%d/%Y")> minscan1 <- min(scanDate1, na.rm = TRUE)> days1 <- scanDate1 - minscan1> sort(days1)> batch <- cut(as.numeric(days), c(-1, 200, 400, 601, 900))> batch> batch <- as.numeric(batch)> table(data.frame(Outcome = affyBatch$subtype, Batch = batch))clustering> d <- as.dist(1 - cor(exprs(eset), method = "spearman"))> hc <- hclust(d)> sampleDendrogram <- as.dendrogram(hc, hang = 0.1)> names(batch) <- sampleNames(eset)> outcome <- as.character(affyBatch$subtype)> names(outcome) <- sampleNames(eset)> sampleDendrogram <- dendrapply(sampleDendrogram, function(x, batch, labels) {+     if (is.leaf(x)) { +         attr(x, "nodePar") <- list(lab.col = as.vector(batch[attr(x, "label")]))+         attr(x, "label") <- as.vector(labels[attr(x, "label")]) +     }+     x+ }, batch, outcome)> plot(sampleDendrogram, main = "Hierarchical clustering of samples")
