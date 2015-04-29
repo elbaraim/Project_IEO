@@ -45,6 +45,9 @@ How to discard bad samples:
 > nuseDiag <- NUSE(Pset, type = "stats")
 > badNuseRleChips <- which(nuseDiag["median", ] > 1.05 | abs(rleDiag["median",]) > 0.1)
 
+sorted:
+> sort(nuseDiag["median", ], decreasing = TRUE)
+> sort(abs(rleDiag["median", ]), decreasing = TRUE)
 
 ## AnnotatedDataFrame object
 > gset <- getGEO(filename="GSE13041-GPL96_series_matrix.txt", GSEMatrix=TRUE)
