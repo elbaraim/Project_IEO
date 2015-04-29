@@ -40,4 +40,15 @@ NUSE plots:
 > Pset <- fitPLM(MLL.B.subset)
 > NUSE(Pset, las=2, main="NUSE plots")
 
-#batchEffect of both data sets of sampling (20 samples each)
+How to discard bad samples:
+> rleDiag <- RLE(Pset, type="stats")
+> nuseDiag <- NUSE(Pset, type = "stats")
+> badNuseRleChips <- which(nuseDiag["median", ] > 1.05 | abs(rleDiag["median",]) > 0.1)
+
+
+## AnnotatedDataFrame object
+> gset <- getGEO(filename="GSE13041-GPL96_series_matrix.txt", GSEMatrix=TRUE)
+> annotated = featureData(gset)
+> phenoData(filtered_affy) <- annotated
+# annotated = phenodata (del AnnotatedDataFrame .txt)
+# filtered_affy = AffyBatch object with the 40 samples chosen
