@@ -101,4 +101,38 @@ Probe level modeling for P6:
 # annotated = phenodata (del AnnotatedDataFrame .txt)
 # filtered_affy = AffyBatch object with the 40 samples chosen
 
-##BATCH EFFECT> scanDate1 <- protocolData(eset)$ScanDate> scanDate1 <- gsub(" .*", "", scanDate1)> scanDate1 <- as.Date(scanDate1, "%m/%d/%Y")> minscan1 <- min(scanDate1, na.rm = TRUE)> days1 <- scanDate1 - minscan1> sort(days1)> batch <- cut(as.numeric(days), c(-1, 200, 400, 601, 900))> batch> batch <- as.numeric(batch)> table(data.frame(Outcome = affyBatch$subtype, Batch = batch))clustering> d <- as.dist(1 - cor(exprs(eset), method = "spearman"))> hc <- hclust(d)> sampleDendrogram <- as.dendrogram(hc, hang = 0.1)> names(batch) <- sampleNames(eset)> outcome <- as.character(affyBatch$subtype)> names(outcome) <- sampleNames(eset)> sampleDendrogram <- dendrapply(sampleDendrogram, function(x, batch, labels) {+     if (is.leaf(x)) { +         attr(x, "nodePar") <- list(lab.col = as.vector(batch[attr(x, "label")]))+         attr(x, "label") <- as.vector(labels[attr(x, "label")]) +     }+     x+ }, batch, outcome)> plot(sampleDendrogram, main = "Hierarchical clustering of samples")
+##BATCH EFFECT
+> scanDate1 <- protocolData(eset)$ScanDate
+> scanDate1 <- gsub(" .*", "", scanDate1)
+> scanDate1 <- as.Date(scanDate1, "%m/%d/%Y")
+> minscan1 <- min(scanDate1, na.rm = TRUE)
+> days1 <- scanDate1 - minscan1
+> sort(days1)
+
+
+> batch <- cut(as.numeric(days), c(-1, 200, 400, 601, 900)) #claudia
+> batch <- cut(as.numeric(days), c(-1, 70, 350, 550, 800, 900)) #elba
+> batch
+
+> batch <- as.numeric(batch)
+
+> table(data.frame(Outcome = affyBatch$subtype, Batch = batch))
+
+
+clustering
+> d <- as.dist(1 - cor(exprs(eset), method = "spearman"))
+> hc <- hclust(d)
+> sampleDendrogram <- as.dendrogram(hc, hang = 0.1)
+> names(batch) <- sampleNames(eset)
+> outcome <- as.character(affyBatch$subtype)
+> names(outcome) <- sampleNames(eset)
+
+> sampleDendrogram <- dendrapply(sampleDendrogram, function(x, batch, labels) {
++     if (is.leaf(x)) { 
++         attr(x, "nodePar") <- list(lab.col = as.vector(batch[attr(x, "label")]))
++         attr(x, "label") <- as.vector(labels[attr(x, "label")]) 
++     }
++     x
++ }, batch, outcome)
+
+> plot(sampleDendrogram, main = "Hierarchical clustering of samples")
