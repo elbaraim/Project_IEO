@@ -1,3 +1,4 @@
+
 > source(“http://bioconductor.org/biocLite.R”)
 > library(“GEOquery”)
 > expr = getGEO(filename="/Users/cristinaleal/Documents/IEO/PROJECT/GSE13041-GPL96_series_matrix.txt")
@@ -15,10 +16,11 @@
 > pd[list.files(celFilePathPN), ] <- "PN"
 > pd[list.files(celFilePathnoPN), ] <- "noPN"
 > pd$subtype <- factor(pd$subtype)
-> vm <- data.frame(labelDescription = "Glioblastoma subtype")
-> rownames(vm) <- "subtype"
+> vm <- data.frame(labelDescription = c(”Glioblastoma subtype”m,”Total Time Survival (days)”,”Vital status”,”age (years)”)
+> rownames(vm) <- c(“subtype”,”TTS”,”status”,”age”)
 > phenoData(affyBatch) <- new("AnnotatedDataFrame", data = pd, varMetadata = vm)
 > sampleNames(affyBatch) = gsub('.{7}$', '', sampleNames(affyBatch))
+> sampleNames(affyBatch) <- paste0(affyBatch$subtype, 1:length(sampleNames(affyBatch)))
 
 #random acquisition of samples in pdata_PN and pdata_rest:
 
@@ -31,33 +33,37 @@
 
 With the samples selected from before we create a subset of affybatch object with the 40 samples:
 > celdir2 = "/Users/cristinaleal/Documents/IEO/PROJECT/filtered/"
-> filtered_affy = ReadAffy(celfile.path = celdir2)
-> filtered_affy
+> affyBatch = ReadAffy(celfile.path = celdir2)
+> affyBatch
 > sampleNames(abatch) = gsub('.{7}$', '', sampleNames(abatch))
 
-Subsets of 10 samples from the filtered_affy(40 samples):
-> filtered_affy.subset3 <- filtered_affy[,21:30]
-> rm(filtered_affy.subset)
-> filtered_affy.subset4 <- filtered_affy[,31:40]
-> filtered_affy.subset2 <- filtered_affy[,11:20]
-> filtered_affy.subset1 <- filtered_affy[,1:10]
+Subsets of 10 samples from the affyBatch(40 samples):
+> affyBatch.subset3 <- affyBatch[,21:30]
+> rm(affyBatch.subset)
+> affyBatch.subset4 <- affyBatch[,31:40]
+> affyBatch.subset2 <- affyBatch[,11:20]
+> affyBatch.subset1 <- affyBatch[,1:10]
 
 For each subset create images comparing the microarrays:
 > par(mfrow = c(2, 5), mar = c(1, 1, 3, 1))
-> image(filtered_affy.subset2)
+> image(affyBatch.subset2)
 
 
 Raw intensity values distribution:
-> boxplot(filtered_affy, las=2, main="Raw intensity values distribution Boxplot")
+> boxplot(affyBatch, las=2, main="Raw intensity values distribution Boxplot")
 
 
 NUSE plots:
 > library(affyPLM)
-> Pset <- fitPLM(filtered_affy)
+> Pset <- fitPLM(affyBatch)
 > NUSE(Pset, las=2, main="NUSE")
 
 RLE plots:
 > RLE(Pset, las=2, main="RLE")
+
+> nuseDiag <- NUSE(Pset, type = "stats")
+> rleDiag <- RLE(Pset, type = "stats")
+> badNuseRleChips <- which(nuseDiag["median", ] > 1.05 | abs(rleDiag["median",]) > 0.1)
 
 How to discard bad samples:
 > rleDiag <- RLE(Pset, type="stats")
@@ -74,9 +80,9 @@ sorted:
 > legend("topright", sampleNames(affyBatch), col = 1:20, lty = 1:20, lwd = 2, inset = 0.1)
 
 Probe level modeling for P6:
-> Pset <- fitPLM(filtered_affy)
+> Pset <- fitPLM(affyBatch)
 > par(mfrow = c(1, 3))
-> image(filtered_affy[, 1]) ## raw intensities for sample A
+> image(affyBatch[, 1]) ## raw intensities for sample A
 > image(Pset, type = "resids", which = 1) ## PLM residuals for sample A image(Pset, type = "weights", which = 1) ## PLM weights for sample A
 
 ##Normalisation
@@ -86,6 +92,15 @@ Probe level modeling for P6:
 > png("./MAInitial%02d.png")
 > MAplot(eset, plot.method = "smoothScatter", ask=FALSE)
 > dev.off()
+
+##simpleaffy quality control
+> library(simpleaffy)
+> myqc <- qc(affyBatch[,1:20])
+> plot(myqc,cex=0.7)
+
+#Row standard deviation (vsn):
+> library(vsn)
+> meanSdPlot(eset)
 
 
 ##Subset of 20 samples (10 samples PN, 10 samples noPN):
@@ -97,9 +112,9 @@ Probe level modeling for P6:
 ## AnnotatedDataFrame object
 > gset <- getGEO(filename="GSE13041-GPL96_series_matrix.txt", GSEMatrix=TRUE)
 > annotated = featureData(gset)
-> phenoData(filtered_affy) <- annotated
+> phenoData(affyBatch) <- annotated
 # annotated = phenodata (del AnnotatedDataFrame .txt)
-# filtered_affy = AffyBatch object with the 40 samples chosen
+# affyBatch = AffyBatch object with the 40 samples chosen
 
 ##BATCH EFFECT
 > scanDate1 <- protocolData(eset)$ScanDate
@@ -118,7 +133,6 @@ Probe level modeling for P6:
 
 > table(data.frame(Outcome = affyBatch$subtype, Batch = batch))
 
-
 clustering
 > d <- as.dist(1 - cor(exprs(eset), method = "spearman"))
 > hc <- hclust(d)
@@ -136,3 +150,9 @@ clustering
 + }, batch, outcome)
 
 > plot(sampleDendrogram, main = "Hierarchical clustering of samples")
+
+##MDS plot:
+> cmd <- cmdscale(as.dist(1 - cor(exprs(eset), method = "spearman")))> plot(cmd, type = "n", main = "MDS plot")> text(cmd, outcome, col = batch, cex = 0.9)> legend("bottomright", paste("Batch", unique(batch)), fill = unique(batch), inset = 0.01, cex=0.75)
+
+## Surrogate variables
+> library(sva)> mod <- model.matrix(~outcome, data = pData(eset))> mod0 <- model.matrix(~1, data = pData(eset))> sv <- sva(exprs(eset), mod, mod0)> par(mfrow = c(2, 6))> for (i in 1:sv$n.sv) boxplot(sv$sv[, i] ~ batch, main = sprintf("SV %d", i), xlab = "Batch")
