@@ -1,0 +1,46 @@
+# Read CEL files and add phenotypic data from getGEO (phenotypic data matrix "GSE13041-*.txt.gz")
+gset <- getGEO(filename="~/Documents/IEO/PROJECT/phenotypic_data/GSE13041-GPL96_series_matrix.txt", GSEMatrix=TRUE)
+celFilePathPN = "/Users/cristinaleal/Documents/IEO/PROJECT/data/"
+celFileNames <- list.files(celFilePathPN, pattern = "CEL.gz", full.names = TRUE)
+affyBatch <- ReadAffy(filenames = celFileNames)
+pheno <- phenoData(gset)
+phenoData(affyBatch)<-pheno
+eset<-rma(affyBatch)
+eset
+
+# Analysis QA of 191 samples
+#As we need to reduce the number of samples, we subset the dataset minimizing the batch effect
+# Select samples trying to minimize batch effect:
+scandate<-protocolData(eset_batch)$ScanDate
+scandate<-gsub(" .*","",scandate)
+scandate<-as.Date(scandate,"%m/%d/%Y")
+minscan<-min(scandate,na.rm=TRUE)
+days<-scandate - minscan
+sort(days)
+batch <- cut(as.numeric(days), c(-1,10,100,250,350,500,700,1000 ))
+batch <- as.numeric(batch)
+sort(batch)
+table(data.frame(Outcome = phenoData(eset)$characteristics_ch1.4, Batch = batch))
+eset_batch <- eset[,!is.na(scandate) & scandate >= (minscan + 800)]
+
+# Creation of a new instance of AffyBatch object (fewer samples)
+
+# Creation of a new instance of ExpressionSet object (fewer samples)
+
+# Reanalysis of QA of the subset
+
+# Reanalysis of Batch effect of the subset
+
+scanDate1 <- protocolData(eset_batch)$ScanDate
+scanDate1 <- gsub(" .*", "", scanDate1)
+scanDate1 <- as.Date(scanDate1, "%m/%d/%Y")
+minscan1 <- min(scanDate1, na.rm = TRUE)
+days1 <- scanDate1 - minscan1
+sort(days1)
+
+batch1 <- cut(as.numeric(days), c(-1, 10, 50, 181))
+batch1 <- as.numeric(batch1)
+table(data.frame(Outcome = phenoData(eset)$characteristics_ch1.4, Batch = batch1))
+
+# Differential expression of the subset
+
