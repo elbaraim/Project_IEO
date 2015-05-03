@@ -1,0 +1,178 @@
+# Read CEL files and add phenotypic data from getGEO (phenotypic data matrix "GSE13041-*.txt.gz")
+gset <- getGEO(filename="~/Documents/IEO/PROJECT/phenotypic_data/GSE13041-GPL96_series_matrix.txt", GSEMatrix=TRUE)
+celFilePathPN = "/Users/cristinaleal/Documents/IEO/PROJECT/data/"
+celFileNames <- list.files(celFilePathPN, pattern = "CEL.gz", full.names = TRUE)
+affyBatch <- ReadAffy(filenames = celFileNames)
+pheno <- phenoData(gset)
+phenoData(affyBatch)<-pheno
+eset<-rma(affyBatch)
+eset
+
+# Analysis QA of 191 samples
+#As we need to reduce the number of samples, we subset the dataset minimizing the batch effect
+# Select samples trying to minimize batch effect:
+# Batch effect
+scandate<-protocolData(eset_batch)$ScanDate
+scandate<-gsub(" .*","",scandate)
+scandate<-as.Date(scandate,"%m/%d/%Y")
+minscan<-min(scandate,na.rm=TRUE)
+days<-scandate - minscan
+sort(days)
+batch <- cut(as.numeric(days), c(-1,10,100,250,350,500,700,1000 ))
+batch <- as.numeric(batch)
+sort(batch)
+table(data.frame(Outcome = phenoData(eset)$characteristics_ch1.4, Batch = batch))
+
+# Subsetting the batch effect --> mision quedarse con el batch 4
+eset_batch <- eset[,!is.na(scandate) & scandate >= (minscan + 250)]
+scandate_batch<-protocolData(eset_batch)$ScanDate
+scandate_batch<-gsub(" .*","",scandate_batch)
+scandate_batch<-as.Date(scandate_batch,"%m/%d/%Y")
+minscan_batch<-min(scandate_batch,na.rm=TRUE)
+days_batch <- scandate_batch - minscan_batch
+sort(days_batch)batch_2 
+batch_2<- cut(as.numeric(days_batch), c(-1,40,600))
+batch_2 <- as.numeric(batch_2)
+table(data.frame(Outcome = phenoData(eset_batch)$characteristics_ch1.4, Batch = batch_2))
+subset <- eset_batch[,!is.na(scandate_batch) & scandate_batch <= (minscan_batch + 40)]
+
+# Analysis of the batch effect of the subset (batch#4 of the first whole data set)
+scandate_batch_subset<-protocolData(subset)$ScanDate
+scandate_batch_subset<-gsub(" .*","",scandate_batch_subset)
+scandate_batch_subset<-as.Date(scandate_batch_subset,"%m/%d/%Y")
+minscan_batch_subset<-min(scandate_batch_subset,na.rm=TRUE)
+days_batch_subset <- scandate_batch_subset - minscan_batch_subset
+sort(days_batch_subset)
+batch_subset<- cut(as.numeric(days_batch_subset), c(-1,10,20,35))
+
+[CLAUDIA]batch_subset<- cut(as.numeric(days_batch_subset), c(-1,10,23,35))[CLAUDIA]
+
+batch_subset <- as.numeric(batch_subset)
+table(data.frame(Outcome = phenoData(subset)$characteristics_ch1.4, Batch = batch_subset))
+
+
+subset1 <- subset[, !is.na(scandate_batch_subset) & scandate_batch_subset > minscan_batch_subset & scandate_batch_subset < (minscan_batch_subset  + 23) ]
+
+
+# Hierarchical clustering and multidimensional scaling
+
+
+d <- as.dist(1 - cor(exprs(subset), method = "spearman"))
+hc <- hclust(d)
+sampleDendrogram <- as.dendrogram(hc, hang = 0.1)
+names(batch_subset) <- sampleNames(subset)
+outcome <- as.character(phenoData(subset)$characteristics_ch1.4)
+names(outcome) <- sampleNames(subset)
+
+sampleDendrogram <- dendrapply(sampleDendrogram, function(x, batch, labels) {
+    if (is.leaf(x)) {
+        attr(x, "nodePar") <- list(lab.col = as.vector(batch_subset[attr(x, "label")]))
+        attr(x, "label") <- as.vector(labels[attr(x, "label")])
+    }
+    x
+    }, subset, outcome)
+
+plot(sampleDendrogram, main = "Hierarchical clustering of samples")
+
+
+cmd <- cmdscale(as.dist(1 - cor(exprs(subset), method = "spearman")))
+plot(cmd, type = "n", main = "MDS plot")
+text(cmd, outcome, col = batch_subset, cex = 0.9)
+legend("bottomright", paste("Batch", unique(batch)), fill = unique(batch), inset = 0.01, cex=0.75)
+
+# PCA - QUANTIFYING BATCH EFFECT
+
+library(corpcor)s <- fast.svd(t(scale(t(exprs(subset)), center = TRUE, scale = TRUE)))
+plot(s$d^2/sum(s$d^2), type="b", lwd=2, las=1,xlab="Principal Component", ylab="Proportion of variance")
+
+
+par(mfrow = c(1, 3))boxplot(split(s$v[, 1], batch_subset), main = sprintf("PC1 %.0f%%", 100 * s$d[1]^2/sum(s$d^2))) 
+boxplot(split(s$v[, 2], batch_subset), main = sprintf("PC2 %.0f%%", 100 * s$d[2]^2/sum(s$d^2))) 
+boxplot(split(s$v[, 3], batch_subset), main = sprintf("PC3 %.0f%%", 100 * s$d[3]^2/sum(s$d^2)))
+
+
+# SVA SURROGATE VARIABLE ANALYSIS
+library(sva)
+mod <- model.matrix(~outcome, data = pData(subset))
+mod0 <- model.matrix(~1, data = pData(subset))
+sv <- sva(exprs(subset), mod, mod0)
+par(mfrow = c(1, 5))
+for (i in 1:sv$n.sv) boxplot(sv$sv[, i] ~ batch_subset, main = sprintf("SV %d", i), xlab = "Batch")
+
+
+SVA F-TEST
+pValues <- f.pvalue(exprs(subset), mod, mod0)
+sum(p.adjust(pValues, method = "BH") < 0.05)
+
+
+modSv <- cbind(mod, sv$sv)
+mod0Sv <- cbind(mod0, sv$sv)
+pValuesSv <- f.pvalue(exprs(subset), modSv, mod0Sv)
+sum(p.adjust(pValuesSv, method = "BH") < 0.05)
+
+
+# REMOVING BATCH EFFECT 
+
+COMBAT
+combatexp <- ComBat(exprs(subset), batch_subset, mod)
+d_combat <- as.dist(1 - cor(combatexp, method = "spearman"))
+sampleClustering_combat <- hclust(d_combat)
+sampleDendrogram_combat <- as.dendrogram(sampleClustering_combat, hang = 0.1)
+names(batch_subset) <- sampleNames(subset)
+outcome <- as.character(phenoData(subset)$characteristics_ch1.4)
+
+sampleDendrogram_combat <- dendrapply(sampleDendrogram_combat, function(x, batch, labels) {
+    if (is.leaf(x)) {
+        attr(x, "nodePar") <- list(lab.col = as.vector(batch_subset[attr(x, "label")]))
+        attr(x, "label") <- as.vector(labels[attr(x, "label")])
+    }
+    x
+    }, subset, outcome)
+
+plot(sampleDendrogram_combat, main = "Hierarchical clustering of samples after ComBat”) 
+legend("topright", paste("Batch", sort(unique(batch_subset))), fill = sort(unique(batch_subset)))
+
+
+QR decomposition
+
+falta
+
+
+REMOVING BATCH EFFECT: SVD
+s <- fast.svd(t(scale(t(exprs(subset)), center = TRUE, scale = TRUE)))
+pcSds <- s$d
+pcSds[1] <- 0
+svdexp <- s$u %*% diag(pcSds) %*% t(s$v)
+colnames(svdexp) <- sampleNames(subset)
+
+d_sva <- as.dist(1 - cor(svdexp, method = "spearman"))
+sampleClustering_sva <- hclust(d_sva)
+sampleDendrogram_sva <- as.dendrogram(sampleClustering_sva, hang = 0.1)
+names(batch_subset) <- sampleNames(subset)
+outcome <- as.character(phenoData(subset)$characteristics_ch1.4)
+
+sampleDendrogram_combat <- dendrapply(sampleDendrogram_sva, function(x, batch, labels) {
+    if (is.leaf(x)) {
+        attr(x, "nodePar") <- list(lab.col = as.vector(batch_subset[attr(x, "label")]))
+        attr(x, "label") <- as.vector(labels[attr(x, "label")])
+    }
+    x
+    }, subset, outcome)
+
+plot(sampleDendrogram_sva, main = "Hierarchical clustering of samples after SVA”) 
+legend("topright", paste("Batch", sort(unique(batch_subset))), fill = sort(unique(batch_subset)))
+
+
+
+
+# Creation of a new instance of AffyBatch object (fewer samples)
+
+
+# Creation of a new instance of ExpressionSet object (fewer samples)
+
+# Reanalysis of QA of the subset
+
+# Reanalysis of Batch effect of the subset
+
+# Differential expression of the subset
+
