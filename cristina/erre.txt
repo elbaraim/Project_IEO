@@ -1,3 +1,9 @@
+source("http://bioconductor.org/biocLite.R")
+library(GEOquery)
+library(affy)
+library(affyPLM)
+library(Biobase)
+
 # Read CEL files and add phenotypic data from getGEO (phenotypic data matrix "GSE13041-*.txt.gz")
 gset <- getGEO(filename="~/Documents/IEO/PROJECT/phenotypic_data/GSE13041-GPL96_series_matrix.txt", GSEMatrix=TRUE)
 celFilePathPN = "/Users/cristinaleal/Documents/IEO/PROJECT/data/"
@@ -30,7 +36,7 @@ scandate_batch<-gsub(" .*","",scandate_batch)
 scandate_batch<-as.Date(scandate_batch,"%m/%d/%Y")
 minscan_batch<-min(scandate_batch,na.rm=TRUE)
 days_batch <- scandate_batch - minscan_batch
-sort(days_batch)batch_2 
+sort(days_batch)
 batch_2<- cut(as.numeric(days_batch), c(-1,40,600))
 batch_2 <- as.numeric(batch_2)
 table(data.frame(Outcome = phenoData(eset_batch)$characteristics_ch1.4, Batch = batch_2))
@@ -75,7 +81,3 @@ as.character(affy_subset$geo_accession) %in% ids
 # Change the name of the samples (in order to match the Expressionset subset)
 sampleNames(affy_subset)<-paste0(1:length(sampleNames(affy_subset)),"-",affy_subset$characteristics_ch1.4)
 sampleNames(affy_subset)
-
-
-
-
