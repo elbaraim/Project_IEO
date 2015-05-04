@@ -81,3 +81,130 @@ as.character(affy_subset$geo_accession) %in% ids
 # Change the name of the samples (in order to match the Expressionset subset)
 sampleNames(affy_subset)<-paste0(1:length(sampleNames(affy_subset)),"-",affy_subset$characteristics_ch1.4)
 sampleNames(affy_subset)
+
+# Quality assessment of affy_subset
+# Images
+affy_subset.1<-affy_subset[,c(1:8)]
+affy_subset.2<-affy_subset[,c(9:16)]
+affy_subset.3<-affy_subset[,c(17:24)]
+affy_subset.4<-affy_subset[,c(25:32)]
+par(mfrow = c(2, 4), mar = c(1, 1, 3, 1))
+image(affy_subset.1)
+image(affy_subset.2)
+image(affy_subset.3)
+image(affy_subset.4)
+dev.off()
+
+# Raw intensity values distribution Boxplot of the affy_subset
+par(mar=c(5,3,7,3))
+boxplot(affy_subset,las=2,names=sampleNames(affy_subset),main="Raw intensity values distribution")
+dev.off()
+
+# Raw intensity values distribution Boxplot of the eset subset
+par(mar=c(7,3,5,3))
+boxplot(subset,las=2,names=sampleNames(affy_subset),main="Raw intensity values distribution")
+dev.off()
+
+# Raw intensity values distribution Plot of the affy_subset:
+plotDensity.AffyBatch(affy_subset, lwd = 2, col = 1:32, lty = 1:32, main="Raw intensity values distribution")
+legend("topright", sampleNames(affy_subset), ncol=2, col = 1:32, lty = 1:32, lwd = 2, inset = 0.1)
+
+# Raw intensity values distribution of the 4 affy subsets
+plotDensity.AffyBatch(affy_subset.1, lwd = 2, col = 1:32, lty = 1:32, main="Raw intensity values distribution subset 1")
+legend("topright", sampleNames(affy_subset.1), col = 1:32, lty = 1:32, lwd = 2, inset = 0.1)
+plotDensity.AffyBatch(affy_subset.2, lwd = 2, col = 1:32, lty = 1:32, main="Raw intensity values distribution subset 2")
+legend("topright", sampleNames(affy_subset.2), col = 1:32, lty = 1:32, lwd = 2, inset = 0.1)
+plotDensity.AffyBatch(affy_subset.3, lwd = 2, col = 1:32, lty = 1:32, main="Raw intensity values distribution subset 3")
+legend("topright", sampleNames(affy_subset.3), col = 1:32, lty = 1:32, lwd = 2, inset = 0.1)
+plotDensity.AffyBatch(affy_subset.4, lwd = 2, col = 1:32, lty = 1:32, main="Raw intensity values distribution subset 4")
+legend("topright", sampleNames(affy_subset.4), col = 1:32, lty = 1:32, lwd = 2, inset = 0.1)
+
+badSamplesRawDist <- 31
+
+# NUSE plots
+Pset <- fitPLM(affy_subset)
+par(mar=c(7,3,5,3))par(mar=c(7,3,5,3))
+NUSE(Pset, las=2, main="NUSE plots", names=sampleNames(affy_subset))
+
+# RLE plots
+par(mar=c(7,3,5,3))
+RLE(Pset, las=2, main="RLE plots", names=sampleNames(affy_subset))
+
+# Bad NUSE and RLE chips:
+nuseDiag <- NUSE(Pset, type = "stats")
+rleDiag <- RLE(Pset, type = "stats")
+sort(nuseDiag["median", ], decreasing = TRUE)
+sort(abs(rleDiag["median", ]), decreasing = TRUE)
+
+badNuseRleChips <- which(nuseDiag["median", ] > 1.03 | abs(rleDiag["median",]) > 0.1)
+badNuseRleChips
+
+# Probe level modeling images for bad chips
+library(affyPLM)
+par(mfrow=c(1,3))
+image(affy_subset[,8])
+image(Pset,type="resids",which=8)
+image(Pset,type="weights",which=8)
+image(affy_subset[,30])
+image(Pset,type="resids",which=30)
+image(Pset,type="weights",which=30)
+dev.off()
+
+badSamplesPLMresids <- 30
+
+
+# MA plots before normalization:
+png("./MA_affy%02d.png")
+MAplot(affy_subset, plot.method = "smoothScatter", ask=FALSE)
+dev.off()
+badSamplesMA<-0
+
+# MA plots after normalization:
+png("./MA_eset%02d.png")
+MAplot(subset, plot.method = "smoothScatter", ask=FALSE)
+dev.off()
+
+# Quality Control Stats of affy_subset 
+library(simpleaffy)
+myqc<-qc(affy_subset[,1:32])
+plot(myqc,cex=0.7)
+
+# Quality assessment Diagnostic
+qaDiag <- data.frame(RawDist = rep(FALSE, ncol(subset)), PLMresids = rep(FALSE, ncol(subset)), NuseRle = rep(FALSE, ncol(subset)), MA = rep(FALSE, ncol(subset)), Failed = rep(0, ncol(subset)), row.names = sampleNames(subset))
+qaDiag[badSamplesRawDist, "RawDist"] <- TRUE
+qaDiag[badSamplesPLMresids, "PLMresids"] <- TRUE
+qaDiag[badNuseRleChips, "NuseRle"]<-TRUE
+qaDiag[badSamplesMA,"MA"]<-TRUE
+qaDiag$Failed<-rowSums(qaDiag)
+qaDiag<-qaDiag[order(qaDiag$Failed, decreasing=TRUE),]
+qaDiag
+write.csv(qaDiag,"qaDiagnostic")
+
+# Register session Information of the Quality assessment
+QA_sessioninfo <- sessionInfo()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
