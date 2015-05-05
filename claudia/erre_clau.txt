@@ -73,15 +73,15 @@ names(batch_subset) <- sampleNames(subset)
 	outcome<-gsub("HC coded: ","",as.character(outcome))
 	names(outcome) <- sampleNames(subset)
 
-sampleDendrogram <- dendrapply(sampleDendrogram, function(x, batch, labels) {
+sampleDendrogram1 <- dendrapply(sampleDendrogram, function(x, batch, labels) {
     if (is.leaf(x)) {
         attr(x, "nodePar") <- list(lab.col = as.vector(batch_subset[attr(x, "label")]))
         attr(x, "label") <- as.vector(labels[attr(x, "label")])
     }
     x
-    }, subset, outcome)
+    }, subset, outcome1)
 
-plot(sampleDendrogram, main = "Hierarchical clustering of samples")
+plot(sampleDendrogram1, main = "Hierarchical clustering of samples")
 legend(“topright”, paste("Batch", unique(batch_subset)), fill = unique(batch_subset), inset = 0.01, cex=0.75)
 
 
@@ -89,7 +89,7 @@ legend(“topright”, paste("Batch", unique(batch_subset)), fill = unique(batch
 cmd <- cmdscale(as.dist(1 - cor(exprs(subset), method = "spearman")))
 plot(cmd, type = "n", main = "MDS plot")
 text(cmd, outcome, col = batch_subset, cex = 0.9)
-legend("bottomright", paste("Batch", unique(batch)), fill = unique(batch), inset = 0.01, cex=0.75)
+legend("bottomleft”, paste("Batch", unique(batch_subset)), fill = unique(batch_subset), inset = 0.01, cex=0.75)
 
 # PCA - QUANTIFYING BATCH EFFECT
 
@@ -174,6 +174,25 @@ plot(sampleDendrogram_sva, main = "Hierarchical clustering of samples after SVA�
 legend("topright", paste("Batch", sort(unique(batch_subset))), fill = sort(unique(batch_subset)))
 
 
+
+# Channge of the colnames of the phenotypic data:
+colnames(pheno)[11]<-"TTS"
+pheno$TTS<-gsub("([TTS(days): ])","",as.character(pheno$TTS))
+colnames(pheno)[12]<-"vital_status"
+pheno$vital_status<-gsub("Vital Status: ","",as.character(pheno$vital_status))
+colnames(pheno)[13]<-"age"
+pheno$age<-gsub("([Age(years) :])","",as.character(pheno$age))
+colnames(pheno)[14]<-"subtype"
+pheno$subtype<-gsub("HC: ","",as.character(pheno$subtype))
+colnames(pheno)[15]<-"main"
+pheno$main<-gsub("HC coded: ","",as.character(pheno$main))
+colnames(pheno)[16]<-"gender"
+pheno$gender<-gsub("Gender: ","",as.character(pheno$gender))
+
+table(pheno$subtype)
+table(pheno$main)
+table(pheno$vital_status)
+table(pheno$gender)
 
 
 # Creation of a new instance of AffyBatch object (fewer samples)
