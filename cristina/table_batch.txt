@@ -1,0 +1,6 @@
+            Batch
+Outcome       1  2  3  4  5  6  7
+  HC: Mes     5  9 19 10  5  8 13
+  HC: PN      3  6 13 11  2 15  6
+  HC: Pro     3  4 17 10  3  8  3
+  HC: ProMes  0  5  8  1  2  1  1
