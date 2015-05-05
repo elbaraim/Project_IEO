@@ -61,8 +61,17 @@ d <- as.dist(1 - cor(exprs(subset), method = "spearman"))
 hc <- hclust(d)
 sampleDendrogram <- as.dendrogram(hc, hang = 0.1)
 names(batch_subset) <- sampleNames(subset)
-outcome <- as.character(phenoData(subset)$characteristics_ch1.4)
-names(outcome) <- sampleNames(subset)
+
+	#for all subtypes
+	outcome1 <- as.character(phenoData(subset)$characteristics_ch1.4)
+	outcome1<-gsub("HC: ","", phenoData(subset)$characteristics_ch1.4)
+	names(outcome1) <- sampleNames(subset)
+
+
+	#for only PN/non-PN
+	outcome <- pData(subset)$characteristics_ch1.5
+	outcome<-gsub("HC coded: ","",as.character(outcome))
+	names(outcome) <- sampleNames(subset)
 
 sampleDendrogram <- dendrapply(sampleDendrogram, function(x, batch, labels) {
     if (is.leaf(x)) {
@@ -73,6 +82,8 @@ sampleDendrogram <- dendrapply(sampleDendrogram, function(x, batch, labels) {
     }, subset, outcome)
 
 plot(sampleDendrogram, main = "Hierarchical clustering of samples")
+legend(“topright”, paste("Batch", unique(batch_subset)), fill = unique(batch_subset), inset = 0.01, cex=0.75)
+
 
 
 cmd <- cmdscale(as.dist(1 - cor(exprs(subset), method = "spearman")))
