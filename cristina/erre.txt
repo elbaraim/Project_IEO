@@ -44,11 +44,51 @@ minscan_batch_subset<-min(scandate_batch_subset,na.rm=TRUE)
 days_batch_subset <- scandate_batch_subset - minscan_batch_subset
 sort(days_batch_subset)
 batch_subset<- cut(as.numeric(days_batch_subset), c(-1,10,20,35))
+
+[CLAUDIA]batch_subset<- cut(as.numeric(days_batch_subset), c(-1,10,23,35))[CLAUDIA]
+
 batch_subset <- as.numeric(batch_subset)
 table(data.frame(Outcome = phenoData(subset)$characteristics_ch1.4, Batch = batch_subset))
 
 
+subset1 <- subset[, !is.na(scandate_batch_subset) & scandate_batch_subset > minscan_batch_subset & scandate_batch_subset < (minscan_batch_subset  + 23) ]
+
+
+# Hierarchical clustering and multidimensional scaling
+
+
+d <- as.dist(1 - cor(exprs(subset), method = "spearman"))
+hc <- hclust(d)
+sampleDendrogram <- as.dendrogram(hc, hang = 0.1)
+names(batch_subset) <- sampleNames(subset)
+outcome <- as.character(phenoData(subset)$characteristics_ch1.4)
+names(outcome) <- sampleNames(subset)
+
+sampleDendrogram <- dendrapply(sampleDendrogram, function(x, batch, labels) {
+    if (is.leaf(x)) {
+        attr(x, "nodePar") <- list(lab.col = as.vector(batch_subset[attr(x, "label")]))
+        attr(x, "label") <- as.vector(labels[attr(x, "label")])
+    }
+    x
+    }, subset, outcome)
+
+plot(sampleDendrogram, main = "Hierarchical clustering of samples")
+
+
+cmd <- cmdscale(as.dist(1 - cor(exprs(subset), method = "spearman")))
+plot(cmd, type = "n", main = "MDS plot")
+text(cmd, outcome, col = batch_subset, cex = 0.9)
+legend("bottomright", paste("Batch", unique(batch)), fill = unique(batch), inset = 0.01, cex=0.75)
+
+# PCA - QUANTIFYING BATCH EFFECT
+
+library(corpcor)s <- fast.svd(t(scale(t(exprs(subset)), center = TRUE, scale = TRUE)))
+plot(s$d^2/sum(s$d^2), type="b", lwd=2, las=1,xlab="Principal Component", ylab="Proportion of variance")
+
+
 # Creation of a new instance of AffyBatch object (fewer samples)
+
+
 # Creation of a new instance of ExpressionSet object (fewer samples)
 
 # Reanalysis of QA of the subset
